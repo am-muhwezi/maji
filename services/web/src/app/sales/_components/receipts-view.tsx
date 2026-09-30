@@ -14,7 +14,7 @@ import { SearchBox, Select } from "@/components/ui/form";
 import { Cell2, TFoot, Table, Td, THead, Th, Tr } from "@/components/ui/table";
 import { SaleStatus } from "@/components/ui/status";
 import { PAYMENT_LABEL, SALE_KIND_LABEL, product } from "@/lib/catalog";
-import { num, money } from "@/lib/format";
+import { CURRENCY, num, money } from "@/lib/format";
 import type { PaymentMethod, Sale } from "@/lib/types";
 import { ReceiptSheet } from "./receipt-sheet";
 import {
@@ -170,7 +170,9 @@ export function ReceiptsView({
                     </span>
                   )}
                 </span>
-                <span className="tnum text-ink">{money(totalAmount(shown))}</span>
+                <span className="tnum text-ink">
+                  {money(totalAmount(shown))}
+                </span>
               </li>
             </ul>
             <div className="hidden md:block">
@@ -265,7 +267,7 @@ export function ReceiptsView({
         <Card>
           <CardHeader
             title="Today by product"
-            hint="Share of today's sales, in RWF."
+            hint={`Share of today's sales, in ${CURRENCY}.`}
           />
           <div className="px-5 pb-5">
             <RankedBars

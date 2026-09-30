@@ -7,38 +7,25 @@ import { Button, Card, CardHeader, Empty } from "@/components/ui/primitives";
 import { Cell2, TFoot, Table, Td, THead, Th, Tr } from "@/components/ui/table";
 import { SaleStatus } from "@/components/ui/status";
 import { useStore } from "@/lib/store";
-import { compact, day, num, money } from "@/lib/format";
-import { agingTotals, type AgingBucket, type Receivable } from "@/lib/ledger";
+import { CURRENCY, compact, day, num, money } from "@/lib/format";
+import {
+  AGING_LABEL,
+  AGING_ORDER,
+  agingTotals,
+  type AgingBucket,
+  type Receivable,
+} from "@/lib/ledger";
 
-const TILES: {
-  bucket: AgingBucket;
-  label: string;
-  hint: string;
-  cls: string;
-  valueCls: string;
-}[] = [
-  {
-    bucket: "overdue",
-    label: "Overdue",
-    hint: "Past the due date. Call these first.",
-    cls: "border-rose-200 bg-rose-50",
-    valueCls: "text-rose-700",
-  },
-  {
-    bucket: "due-soon",
-    label: "Due within 7 days",
-    hint: "Remind them before it is late.",
+/** Tile colours per bucket when it holds money. An empty bucket is always neutral. */
+const TONE: Record<AgingBucket, { cls: string; valueCls: string }> = {
+  overdue: { cls: "border-rose-200 bg-rose-50", valueCls: "text-rose-700" },
+  "due-soon": {
     cls: "border-amber-200 bg-amber-50",
     valueCls: "text-amber-700",
   },
-  {
-    bucket: "current",
-    label: "Later",
-    hint: "Due in more than a week.",
-    cls: "border-line bg-canvas",
-    valueCls: "text-ink",
-  },
-];
+  current: { cls: "border-line bg-canvas", valueCls: "text-ink" },
+};
+const NEUTRAL = TONE.current;
 
 /** Unpaid credit sales, most urgent first, with an inline two-step "Mark paid". */
 export function OwedView({
@@ -86,35 +73,45 @@ export function OwedView({
       ) : (
         <>
           <div className="grid grid-cols-3 gap-2 px-4 pb-5 sm:gap-3 sm:px-5">
-            {TILES.map((t) => (
-              <div
-                key={t.bucket}
-                className={clsx("min-w-0 rounded-lg border p-3 sm:p-4", t.cls)}
-              >
-                <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
-                  <span className="text-[12px] leading-4 font-medium text-slate-700 sm:text-[13px]">
-                    {t.label}
-                  </span>
-                  <span className="tnum text-[11px] text-slate-500 sm:text-[12px]">
-                    {counts[t.bucket]} sale{counts[t.bucket] === 1 ? "" : "s"}
-                  </span>
-                </div>
-                <p
+            {AGING_ORDER.map((bucket) => {
+              const t = {
+                bucket,
+                ...AGING_LABEL[bucket],
+                ...(totals[bucket] > 0 ? TONE[bucket] : NEUTRAL),
+              };
+              return (
+                <div
+                  key={t.bucket}
                   className={clsx(
-                    "tnum mt-1 text-lg font-semibold tracking-tight sm:text-2xl",
-                    t.valueCls,
+                    "min-w-0 rounded-lg border p-3 sm:p-4",
+                    t.cls,
                   )}
                 >
-                  {compact(totals[t.bucket])}{" "}
-                  <span className="text-[12px] font-medium text-slate-500 sm:text-sm">
-                    RWF
-                  </span>
-                </p>
-                <p className="mt-0.5 hidden text-[12px] text-slate-500 sm:block">
-                  {t.hint}
-                </p>
-              </div>
-            ))}
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
+                    <span className="text-[12px] leading-4 font-medium text-slate-700 sm:text-[13px]">
+                      {t.label}
+                    </span>
+                    <span className="tnum text-[11px] text-slate-500 sm:text-[12px]">
+                      {counts[t.bucket]} sale{counts[t.bucket] === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <p
+                    className={clsx(
+                      "tnum mt-1 text-lg font-semibold tracking-tight sm:text-2xl",
+                      t.valueCls,
+                    )}
+                  >
+                    {compact(totals[t.bucket])}{" "}
+                    <span className="text-[12px] font-medium text-slate-500 sm:text-sm">
+                      {CURRENCY}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 hidden text-[12px] text-slate-500 sm:block">
+                    {t.hint}
+                  </p>
+                </div>
+              );
+            })}
           </div>
           <ul
             className="border-t border-line md:hidden"

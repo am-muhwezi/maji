@@ -19,6 +19,10 @@ export function onHand(line: StockLine): number {
 
 export interface StockSummary {
   bottles: number;
+  /** Bottles on counted lines (their count). */
+  countedBottles: number;
+  /** Bottles on uncounted lines (their expected figure). */
+  expectedBottles: number;
   litres: number;
   products: number;
   counted: number;
@@ -33,16 +37,20 @@ export interface StockSummary {
 export function stockSummary(lines: StockLine[], materials: Material[]): StockSummary {
   const totals = stockTotals(lines);
   let bottles = 0;
+  let countedBottles = 0;
   let litres = 0;
   let value = 0;
   for (const l of lines) {
     const n = onHand(l);
     bottles += n;
+    if (l.physical !== null) countedBottles += n;
     litres += n * product(l.productId).litres;
     value += varianceValue(l);
   }
   return {
     bottles,
+    countedBottles,
+    expectedBottles: bottles - countedBottles,
     litres,
     products: lines.length,
     counted: totals.counted,

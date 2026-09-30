@@ -1,3 +1,4 @@
+import { CURRENCY } from "@/lib/format";
 import { describe, expect, it } from "vitest";
 import { salesOn } from "@/lib/ledger";
 import { seed } from "@/lib/seed";
@@ -104,7 +105,7 @@ describe("salesCsv", () => {
     ]);
     const lines = csv.split("\r\n");
     expect(lines[0]).toBe(
-      "Receipt,Date,Time,Customer,Note,Product,Type,Qty,Amount (RWF),Payment,Status",
+      `Receipt,Date,Time,Customer,Note,Product,Type,Qty,Amount (${CURRENCY}),Payment,Status`,
     );
     expect(csv).toContain('"Hotel ""Nile"", Jinja"');
     expect(csv).toContain('"Line\nbreak"');

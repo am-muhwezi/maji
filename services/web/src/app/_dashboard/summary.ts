@@ -4,6 +4,8 @@
  */
 import { product } from "@/lib/catalog";
 import { openShortages, receivables, variance } from "@/lib/ledger";
+import type { Tone } from "@/components/ui/primitives";
+import type { AgingBucket } from "@/lib/ledger";
 import type { OpsState, Sale } from "@/lib/types";
 
 export interface AttentionSummary {
@@ -50,4 +52,18 @@ export function latestSales(sales: Sale[], today: string, limit = 5): Sale[] {
     .filter((s) => s.day === today)
     .sort((a, b) => b.time.localeCompare(a.time) || b.receipt.localeCompare(a.receipt, undefined, { numeric: true }))
     .slice(0, limit);
+}
+
+/** Badge colour per money-owed bucket: only overdue is alarming. */
+export const BUCKET_TONE: Record<AgingBucket, Tone> = {
+  overdue: "danger",
+  "due-soon": "warning",
+  current: "neutral",
+};
+
+/** Plain-words distance to the due date: "34 days late", "due today", "due in 1 day". */
+export function dueText(dueIn: number): string {
+  if (dueIn < 0) return `${plural(-dueIn, "day", "days")} late`;
+  if (dueIn === 0) return "due today";
+  return `due in ${plural(dueIn, "day", "days")}`;
 }

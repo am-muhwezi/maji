@@ -2,6 +2,7 @@
  * Pure helpers for the Sales page: filtering, ordering, per-product roll-up and CSV export.
  * Kept out of JSX so they are tested once (see sales-data.test.ts).
  */
+import { CURRENCY } from "@/lib/format";
 import { PAYMENT_LABEL, SALE_KIND_LABEL, product } from "@/lib/catalog";
 import { isOutstanding } from "@/lib/ledger";
 import type { PaymentMethod, ProductId, Sale, SaleKind } from "@/lib/types";
@@ -108,7 +109,7 @@ const CSV_HEADER = [
   "Product",
   "Type",
   "Qty",
-  "Amount (RWF)",
+  `Amount (${CURRENCY})`,
   "Payment",
   "Status",
 ];

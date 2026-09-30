@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { seed } from "@/lib/seed";
 import type { OpsState } from "@/lib/types";
-import { attention, latestSales, overdueCustomers } from "./summary";
+import { attention, dueText, latestSales, overdueCustomers } from "./summary";
 
 const TODAY = "2026-09-30";
 const base = (): OpsState => seed(TODAY);
@@ -66,5 +66,26 @@ describe("latestSales", () => {
 
   it("excludes other days and handles an empty day", () => {
     expect(latestSales(base().sales, "2026-10-01")).toEqual([]);
+  });
+});
+
+describe("dueText", () => {
+  it("words late, today and future due dates with correct plurals", () => {
+    expect(dueText(-34)).toBe("34 days late");
+    expect(dueText(-1)).toBe("1 day late");
+    expect(dueText(0)).toBe("due today");
+    expect(dueText(1)).toBe("due in 1 day");
+    expect(dueText(12)).toBe("due in 12 days");
+  });
+});
+
+describe("dashboard KPIs on the 1st of a month", () => {
+  it("rolling 30-day P&L stays sane (round-1 bug: -969% margin)", async () => {
+    const { periodPnl, rollingPeriod } = await import("@/lib/ledger");
+    const s = seed("2026-10-01");
+    const pnl = periodPnl(s, rollingPeriod(s.today, 30));
+    expect(pnl.revenue).toBeGreaterThan(pnl.expenses);
+    expect(pnl.margin).toBeGreaterThan(0);
+    expect(pnl.margin).toBeLessThan(1);
   });
 });

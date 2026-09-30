@@ -79,6 +79,9 @@ test("count stock, explain shortages, close and reopen the day", async ({ page }
 
   for (const name of ["20L Bottle", "18.9L Dispenser"]) {
     await page.getByRole("button", { name: `Explain shortage for ${name}` }).filter({ visible: true }).click();
+    // No reason is pre-selected: saving must be a deliberate choice.
+    await expect(page.getByRole("button", { name: "Pick a reason first" })).toBeDisabled();
+    await page.locator("dialog[open]").getByText("Breakage or spillage").click();
     await page.getByRole("button", { name: "Save explanation" }).click();
     await expect(page.getByText(`${name}: shortage explained`)).toBeVisible();
   }

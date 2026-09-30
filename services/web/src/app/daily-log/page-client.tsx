@@ -5,11 +5,12 @@ import { useState } from "react";
 import { useQuickEntry } from "@/components/entry/quick-entry";
 import { ExplainShortageSheet } from "@/components/explain-shortage";
 import { Button, Kpi, KpiGrid, PageHeader } from "@/components/ui/primitives";
-import { num, pct, ratio, signed, money } from "@/lib/format";
-import { stockTotals, varianceValue } from "@/lib/ledger";
+import { money, num, signed } from "@/lib/format";
+import { canCloseDay, stockTotals, varianceValue } from "@/lib/ledger";
 import { useStore } from "@/lib/store";
 import type { ProductId } from "@/lib/types";
 import { CloseDay } from "./_components/close-day";
+import { soldSplit } from "./_components/sold-split";
 import { DaySteps } from "./_components/steps";
 import { StockCount } from "./_components/stock-count";
 
@@ -20,6 +21,9 @@ export function Page() {
 
   const totals = stockTotals(state.lines);
   const differenceValue = state.lines.reduce((sum, l) => sum + varianceValue(l), 0);
+  const sold = soldSplit(state.sales, state.today);
+  // One filled button at a time: once the day is ready to close, "Close day" takes over.
+  const readyToClose = !state.dayClosed && canCloseDay(state).ok;
 
   return (
     <div className="flex flex-col gap-6">
@@ -29,7 +33,7 @@ export function Page() {
           description="Record production as it happens, count stock at shift end, then close the day."
           actions={
             <Button
-              variant="primary"
+              variant={readyToClose ? "secondary" : "primary"}
               icon={Plus}
               onClick={() => openEntry("production")}
               disabled={state.dayClosed}
@@ -55,7 +59,17 @@ export function Page() {
           value={num(totals.sales)}
           unit="units"
           icon={ShoppingCart}
-          foot={`${pct(ratio(totals.sales, totals.opening + totals.production))} of stock on hand`}
+          foot={
+            sold.receipts === 0 ? (
+              "No sales recorded yet"
+            ) : (
+              <>
+                <span className="whitespace-nowrap">{num(sold.refills)} refills</span>
+                {" · "}
+                <span className="whitespace-nowrap">{num(sold.newBottles)} new bottles</span>
+              </>
+            )
+          }
         />
         <div className="col-span-2 lg:col-span-1">
           <Kpi
@@ -69,7 +83,14 @@ export function Page() {
               totals.counted === 0
                 ? "Nothing counted yet"
                 : differenceValue !== 0
-                  ? `${money(Math.abs(differenceValue))} ${differenceValue < 0 ? "missing" : "extra"} at refill price`
+                  ? (
+                      <>
+                        <span className="whitespace-nowrap">
+                          {money(Math.abs(differenceValue))} {differenceValue < 0 ? "missing" : "extra"}
+                        </span>{" "}
+                        <span className="whitespace-nowrap">at refill price</span>
+                      </>
+                    )
                   : totals.variance === 0
                     ? `Balanced on ${totals.counted} of ${totals.lines} products`
                     : "Shortages and extras cancel out in value"

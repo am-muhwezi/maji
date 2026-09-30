@@ -2,6 +2,7 @@
 
 import { Plus, Receipt, SearchX } from "lucide-react";
 import { useMemo, useState } from "react";
+import { FadeScroll } from "./fade-scroll";
 import { Badge, Button, Card, CardHeader, Empty, Segmented } from "@/components/ui/primitives";
 import { SearchBox } from "@/components/ui/form";
 import { Cell2, TFoot, THead, Table, Td, Th, Tr } from "@/components/ui/table";
@@ -11,14 +12,19 @@ import type { CategoryTotal } from "@/lib/ledger";
 import type { Expense } from "@/lib/types";
 import { filterExpenses, sumAmount, type CategoryFilter } from "./month-expenses";
 
-/** The page's main card: this month's expenses with search and a category filter. */
+/** The page's main card: the period's expenses with search and a category filter. */
 export function ExpenseTable({
+  title,
+  periodLabel,
   expenses,
   categories,
   onOpen,
   onLog,
 }: {
-  /** This month's expenses, already newest first. */
+  title: string;
+  /** Month name, used in empty-state copy. */
+  periodLabel: string;
+  /** The period's expenses, already newest first. */
   expenses: Expense[];
   /** Categories with spending this month (order used for the filter). */
   categories: CategoryTotal[];
@@ -49,31 +55,33 @@ export function ExpenseTable({
   return (
     <Card>
       <CardHeader
-        title="This month's expenses"
+        title={title}
         hint={filtering ? `${shown.length} of ${expenses.length} shown · tap a row for details` : "Newest first · tap a row for details"}
       />
       {expenses.length > 0 && (
         <div className="flex flex-col gap-3 px-5 pb-4">
           <SearchBox value={query} onChange={setQuery} placeholder="Search description, vendor or ref" label="Search expenses" />
-          <Segmented
-            label="Filter by category"
-            value={category}
-            onChange={setPicked}
-            options={[
-              { value: "all" as CategoryFilter, label: "All", count: expenses.length },
-              ...categories.map((c) => ({ value: c.category as CategoryFilter, label: c.label, count: counts.get(c.category) ?? 0 })),
-            ]}
-          />
+          <FadeScroll>
+            <Segmented
+              label="Filter by category"
+              value={category}
+              onChange={setPicked}
+              options={[
+                { value: "all" as CategoryFilter, label: "All", count: expenses.length },
+                ...categories.map((c) => ({ value: c.category as CategoryFilter, label: c.label, count: counts.get(c.category) ?? 0 })),
+              ]}
+            />
+          </FadeScroll>
         </div>
       )}
 
       {expenses.length === 0 ? (
         <div className="border-t border-line">
-          <Empty icon={Receipt} title="No expenses logged this month">
+          <Empty icon={Receipt} title={`No expenses logged in ${periodLabel}`}>
             Log fuel, power, wages or repairs as you pay them.
           </Empty>
           <div className="-mt-6 flex justify-center pb-10">
-            <Button variant="primary" icon={Plus} onClick={onLog}>
+            <Button icon={Plus} onClick={onLog}>
               Log expense
             </Button>
           </div>
@@ -81,7 +89,7 @@ export function ExpenseTable({
       ) : shown.length === 0 ? (
         <div className="border-t border-line">
           <Empty icon={SearchX} title="No expenses match">
-            Nothing this month matches {query.trim() ? <>&ldquo;{query.trim()}&rdquo;</> : "this filter"}
+            Nothing in {periodLabel} matches {query.trim() ? <>&ldquo;{query.trim()}&rdquo;</> : "this filter"}
             {category !== "all" ? <> in {EXPENSE_LABEL[category]}</> : null}.
           </Empty>
           <div className="-mt-6 flex justify-center pb-10">
@@ -124,7 +132,7 @@ export function ExpenseTable({
               <THead>
                 <tr>
                   <Th>Ref</Th>
-                  <Th>What for</Th>
+                  <Th className="min-w-56">What for</Th>
                   <Th className="hidden md:table-cell">Category</Th>
                   <Th className="hidden md:table-cell">Paid by</Th>
                   <Th num>Amount</Th>

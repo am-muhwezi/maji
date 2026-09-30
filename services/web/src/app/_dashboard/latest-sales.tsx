@@ -26,7 +26,7 @@ export function LatestSales({ className }: { className?: string }) {
         }
       />
       {rows.length === 0 ? (
-        <Empty icon={ShoppingCart} title="No sales yet today">Use Record a sale above; each sale appears here right away.</Empty>
+        <Empty icon={ShoppingCart} title="No sales yet today">Use New entry to record one; it appears here right away.</Empty>
       ) : (
         <>
           {/* Stacked list where the card is narrow (phone, and the 2/3 column at 1024-1279px); table elsewhere. */}

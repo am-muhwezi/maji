@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleCheck } from "lucide-react";
+import { CircleCheck, Lock } from "lucide-react";
 import { RESOLUTION_LABEL } from "@/components/explain-shortage";
 import { Badge, Button, Card, CardHeader } from "@/components/ui/primitives";
 import { product } from "@/lib/catalog";
@@ -18,9 +18,14 @@ export function ShortagesCard({ state, onExplain }: { state: OpsState; onExplain
   return (
     <Card aria-labelledby="shortages-title">
       <CardHeader
-        title={<span id="shortages-title">Shortages to explain</span>}
+        title={<span id="shortages-title">{open === 0 ? "Today's shortages" : "Shortages to explain"}</span>}
         hint={
-          open === 0 ? (
+          state.dayClosed ? (
+            <span className="inline-flex items-center gap-1.5 text-slate-600">
+              <Lock className="size-4" aria-hidden />
+              Day closed{state.closedBy ? ` by ${state.closedBy}` : ""}. These explanations are locked.
+            </span>
+          ) : open === 0 ? (
             <span className="inline-flex items-center gap-1.5 text-emerald-700">
               <CircleCheck className="size-4" aria-hidden />
               All explained. The day can be closed on the Daily Log.
@@ -69,7 +74,7 @@ export function ShortagesCard({ state, onExplain }: { state: OpsState; onExplain
                 ) : state.dayClosed ? (
                   <Badge tone="danger">Not explained</Badge>
                 ) : (
-                  <Button size="sm" variant="primary" onClick={() => onExplain(l.productId)} aria-label={`Explain shortage for ${p.name}`} className="w-full sm:w-auto">
+                  <Button size="sm" variant="secondary" onClick={() => onExplain(l.productId)} aria-label={`Explain shortage for ${p.name}`} className="w-full sm:w-auto">
                     Explain
                   </Button>
                 )}

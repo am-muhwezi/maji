@@ -52,7 +52,7 @@ export function CloseDay() {
           </p>
         )}
         <Button
-          variant="primary"
+          variant={check.ok ? "primary" : "secondary"}
           icon={Lock}
           disabled={!check.ok}
           className="w-full sm:w-auto"

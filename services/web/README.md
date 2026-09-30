@@ -16,6 +16,12 @@ npm run dev          # http://localhost:3000
 Data is sample data kept in the browser (localStorage, key `hydroflow.ops.v2`). It resets automatically on a
 new calendar day, or on demand with **How this works → Reset sample data**. No backend, no accounts.
 
+Currency is set in one place: `CURRENCY` in `src/lib/format.ts` (currently `RWF`).
+
+The sample business is anchored to today: 60 days of past sales (`history`) plus itemised receipts, and a repeating
+30-day cycle of costs. Nothing is clamped to the calendar month, so "last 30 days", "this month" and "last month"
+all read correctly on any date, including the 1st (a unit test pins that).
+
 ## Pages
 
 | Route        | Answers                                                     | Main action        |
@@ -38,16 +44,19 @@ from any page.
 4. At shift end: Daily Log → type the counted stock → explain any shortage → **Close day**.
    Closing is blocked until every product is counted and every shortage has a reason; a closed day is read-only.
 
+Mistakes: today's receipts can be voided (stock is returned) and today's expenses deleted, from their detail
+sheets. Older entries are locked.
+
 ## Code map
 
 ```
 src/lib/          deterministic core, no React
   types.ts        domain types
   catalog.ts      products, prices, labels, budgets
-  ledger.ts       all business math: expected stock, variance, P&L, receivables aging, roll-ups
+  ledger.ts       all business math: expected stock, variance, periods + P&L, money collected, receivables aging
   reducer.ts      pure state transitions (record sale, count, close day...), rejects invalid input
   seed.ts         sample data anchored to today
-  format.ts       RWF / number / date formatting (fixed tables, identical on server and browser)
+  format.ts       CURRENCY, money / number / date formatting (fixed tables, identical on server and browser)
   store.tsx       React context + localStorage persistence around reducer.ts
 src/components/
   ui/             primitives, table, form, sheet, charts, status badges

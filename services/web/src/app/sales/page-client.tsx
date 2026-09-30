@@ -5,7 +5,7 @@ import {
   Download,
   Plus,
   ReceiptText,
-  Smartphone,
+  HandCoins,
   Wallet,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -18,8 +18,15 @@ import {
   PageHeader,
   Segmented,
 } from "@/components/ui/primitives";
-import { compact, num } from "@/lib/format";
-import { agingTotals, receivables, salesOn, salesSummary } from "@/lib/ledger";
+import { CURRENCY, compact, num } from "@/lib/format";
+import {
+  agingTotals,
+  collectedOn,
+  receivables,
+  salesOn,
+  salesSummary,
+} from "@/lib/ledger";
+import { CREDIT_TERMS_DAYS } from "@/lib/reducer";
 import { useStore } from "@/lib/store";
 import { OwedView } from "./_components/owed-view";
 import { ReceiptsView } from "./_components/receipts-view";
@@ -63,6 +70,8 @@ function SalesPage() {
   );
 
   const sum = salesSummary(todays);
+  const collected = collectedOn(state.sales, state.today);
+  const creditToday = todays.filter((s) => s.payment === "credit").length;
   const aging = agingTotals(owed);
   const overdueCount = owed.filter((r) => r.bucket === "overdue").length;
 
@@ -117,26 +126,63 @@ function SalesPage() {
       <KpiGrid>
         <Kpi
           label="Collected today"
-          value={compact(sum.collected)}
-          unit="RWF"
+          value={compact(collected.total)}
+          unit={CURRENCY}
           icon={Wallet}
-          foot="cash + mobile money"
+          foot={
+            <>
+              <span className="whitespace-nowrap">
+                cash {compact(collected.cash)} ·
+              </span>{" "}
+              <span className="whitespace-nowrap">
+                mobile {compact(collected.mobile)}
+              </span>
+              {collected.creditRepaid > 0 && (
+                <>
+                  {" "}
+                  <span className="whitespace-nowrap">
+                    + {compact(collected.creditRepaid)} old credit
+                  </span>
+                </>
+              )}
+            </>
+          }
         />
         <Kpi
-          label="Mobile money"
-          value={compact(sum.byMethod.mtn + sum.byMethod.airtel)}
-          unit="RWF"
-          icon={Smartphone}
-          foot={`MTN ${compact(sum.byMethod.mtn)} · Airtel ${compact(sum.byMethod.airtel)}`}
+          label="Sold on credit today"
+          value={compact(sum.byMethod.credit)}
+          unit={CURRENCY}
+          icon={HandCoins}
+          foot={
+            creditToday === 0 ? (
+              "None today"
+            ) : (
+              <>
+                <span className="whitespace-nowrap">
+                  {creditToday} receipt{creditToday === 1 ? "" : "s"},
+                </span>{" "}
+                <span className="whitespace-nowrap">
+                  due in {CREDIT_TERMS_DAYS} days
+                </span>
+              </>
+            )
+          }
         />
         <Kpi
           label="Money owed"
           value={compact(aging.total)}
-          unit="RWF"
+          unit={CURRENCY}
           icon={Clock}
           valueTone={aging.overdue > 0 ? "danger" : "ink"}
           footTone={aging.overdue > 0 ? "down" : "neutral"}
-          foot={`${aging.accounts} customer${aging.accounts === 1 ? "" : "s"} · ${overdueCount} overdue`}
+          foot={
+            <>
+              <span className="whitespace-nowrap">
+                {aging.accounts} customer{aging.accounts === 1 ? "" : "s"} ·
+              </span>{" "}
+              <span className="whitespace-nowrap">{overdueCount} overdue</span>
+            </>
+          }
           href="/sales?show=owed"
         />
         <Kpi
