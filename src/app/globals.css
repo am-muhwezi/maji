@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * HydroFlow design tokens (see stitch_water_business_management_dashboard/hydroflow_operations/DESIGN.md).
+ * HydroFlow design tokens (from the Stitch DESIGN.md; see git history for the original export).
  * The spec's hex values are Tailwind's slate / sky / emerald / amber / rose scales,
  * so components use those scales directly; only the semantic extras live here.
  */
