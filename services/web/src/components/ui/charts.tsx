@@ -129,8 +129,17 @@ export function Legend({ items }: { items: { color: string; label: string; value
  * Ranked horizontal bars in a single hue: length encodes magnitude, labels carry identity.
  * Used for "share of total" breakdowns instead of a donut or a multi-hue stacked bar.
  */
-export function RankedBars({ rows, format = money }: { rows: { label: string; value: number; share: number; note?: string }[]; format?: (n: number) => string }) {
-  const max = Math.max(1, ...rows.map((r) => r.value));
+export function RankedBars({
+  rows,
+  format = money,
+  max: sharedMax,
+}: {
+  rows: { label: string; value: number; share: number; note?: string }[];
+  format?: (n: number) => string;
+  /** Pass the overall maximum when one list is split across columns, so every bar uses one scale. */
+  max?: number;
+}) {
+  const max = sharedMax ?? Math.max(1, ...rows.map((r) => r.value));
   return (
     <ul className="flex flex-col gap-3.5">
       {rows.map((r) => (

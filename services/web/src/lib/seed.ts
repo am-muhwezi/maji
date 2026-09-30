@@ -1,19 +1,17 @@
 /**
- * Demo data, anchored to `today` so the app always looks like a live working day.
- * Offsets are in days before today. Expense days are clamped into the current month
- * so the monthly views stay populated even early in a month.
+ * Sample data, anchored to `today` so the app always looks like a live working day.
+ * Everything is placed by offset (days before today) and nothing is clamped, so every
+ * date window (this month, last month, last 30 days) sees a realistic, continuous
+ * business. This matters on the 1st of a month: an earlier seed clamped a whole month
+ * of costs onto that one day.
  */
 import { addDays } from "./format";
-import type { DayVolume, Expense, Material, OpsState, Sale, StockLine } from "./types";
+import type { Expense, HistoryDay, Material, OpsState, ProductId, Sale, StockLine } from "./types";
+
+/** Days of itemless sales history kept before today. */
+export const HISTORY_DAYS = 60;
 
 export function seed(today: string): OpsState {
-  const dayOfMonth = Number(today.slice(8, 10));
-  const monthStart = `${today.slice(0, 8)}01`;
-  const inMonth = (offset: number) => {
-    const d = addDays(today, -offset);
-    return d < monthStart ? monthStart : d;
-  };
-
   const materials: Material[] = [
     { id: "e20", name: "20L empty shells", kind: "empties", onHand: 1_120, unit: "shells", reorderAt: 300, capacity: 2_000 },
     { id: "e19", name: "18.9L empty shells", kind: "empties", onHand: 170, unit: "shells", reorderAt: 150, capacity: 600 },
@@ -52,9 +50,9 @@ export function seed(today: string): OpsState {
   ];
 
   // Sold counts come from today's receipts so the ledger and the sales list always agree.
-  const soldToday = (id: StockLine["productId"]) =>
+  const soldToday = (id: ProductId) =>
     sales.filter((x) => x.day === today && x.productId === id).reduce((a, x) => a + x.qty, 0);
-  const line = (productId: StockLine["productId"], opening: number, production: number, missing: number | null): StockLine => {
+  const line = (productId: ProductId, opening: number, production: number, missing: number | null): StockLine => {
     const sold = soldToday(productId);
     return { productId, opening, production, sales: sold, physical: missing === null ? null : opening + production - sold - missing };
   };
@@ -67,44 +65,51 @@ export function seed(today: string): OpsState {
     line("p5", 280, 90, null),
   ];
 
-  const e = (n: number, offset: number, rest: Omit<Expense, "id" | "ref" | "day">): Expense => ({
-    id: `e${n}`,
-    ref: `EXP-${String(n).padStart(3, "0")}`,
-    day: inMonth(offset),
-    ...rest,
-  });
-
-  const expenses: Expense[] = [
-    e(41, 0, { category: "power", description: "3-phase power token, line 1", vendor: "Umeme", amount: 2_800_000, payment: "bank", approvedBy: "Director" }),
-    e(40, 0, { category: "transport", description: "Diesel for 2 delivery trucks", vendor: "TotalEnergies", amount: 1_450_000, payment: "mobile", approvedBy: "Operations Mgr" }),
-    e(39, 1, { category: "packaging", description: "5,000 caps & shrink seals", vendor: "Polypack Industries", amount: 1_200_000, payment: "bank", approvedBy: "Plant Supervisor" }),
-    e(38, 1, { category: "payroll", description: "Casual loaders, night shift", vendor: "Casual staff (14)", amount: 850_000, payment: "cash", approvedBy: "Operations Mgr" }),
-    e(37, 2, { category: "repairs", description: "RO filter cartridges", vendor: "AquaPure Systems", amount: 480_000, payment: "mobile", approvedBy: "Plant Supervisor" }),
-    e(36, 2, { category: "repairs", description: "Borehole pump service", vendor: "AquaPure Systems", amount: 620_000, payment: "cheque", approvedBy: "Director" }),
-    e(35, 5, { category: "payroll", description: "Monthly salaries, floor staff", vendor: "Staff payroll", amount: 6_650_000, payment: "bank", approvedBy: "Director" }),
-    e(34, 7, { category: "transport", description: "Diesel, weekly routes", vendor: "TotalEnergies", amount: 1_800_000, payment: "mobile", approvedBy: "Operations Mgr" }),
-    e(33, 9, { category: "water", description: "Municipal water bill", vendor: "NWSC", amount: 1_800_000, payment: "bank", approvedBy: "Director" }),
-    e(32, 10, { category: "power", description: "3-phase power token, line 1", vendor: "Umeme", amount: 2_800_000, payment: "bank", approvedBy: "Director" }),
-    e(31, 12, { category: "packaging", description: "PET preforms, 140g", vendor: "Nice House of Plastics", amount: 2_900_000, payment: "bank", approvedBy: "Director" }),
-    e(30, 14, { category: "transport", description: "Diesel, weekly routes", vendor: "TotalEnergies", amount: 1_750_000, payment: "mobile", approvedBy: "Operations Mgr" }),
-    e(29, 16, { category: "repairs", description: "Conveyor belt replacement", vendor: "Kampala Engineering", amount: 1_500_000, payment: "bank", approvedBy: "Director" }),
-    e(28, 20, { category: "power", description: "3-phase power token, line 1", vendor: "Umeme", amount: 2_800_000, payment: "bank", approvedBy: "Director" }),
-    e(27, 21, { category: "transport", description: "Diesel, weekly routes", vendor: "TotalEnergies", amount: 1_800_000, payment: "mobile", approvedBy: "Operations Mgr" }),
+  // A 30-day cycle of costs (15 entries, RWF 31.2M), repeated for the previous cycle so
+  // any 30-day window, including last month, holds a full month of spending.
+  type Template = [n: number, offset: number, rest: Omit<Expense, "id" | "ref" | "day">];
+  const e = (n: number, offset: number, rest: Omit<Expense, "id" | "ref" | "day">): Template => [n, offset, rest];
+  const cycle: Template[] = [
+    e(41, 0, { category: "power", description: "3-phase power token, line 1", vendor: "Umeme", amount: 2_800_000, payment: "bank", recordedBy: "Director" }),
+    e(40, 0, { category: "transport", description: "Diesel for 2 delivery trucks", vendor: "TotalEnergies", amount: 1_450_000, payment: "mobile", recordedBy: "Operations Mgr" }),
+    e(39, 1, { category: "packaging", description: "5,000 caps & shrink seals", vendor: "Polypack Industries", amount: 1_200_000, payment: "bank", recordedBy: "Plant Supervisor" }),
+    e(38, 1, { category: "payroll", description: "Casual loaders, night shift", vendor: "Casual staff (14)", amount: 850_000, payment: "cash", recordedBy: "Operations Mgr" }),
+    e(37, 2, { category: "repairs", description: "RO filter cartridges", vendor: "AquaPure Systems", amount: 480_000, payment: "mobile", recordedBy: "Plant Supervisor" }),
+    e(36, 2, { category: "repairs", description: "Borehole pump service", vendor: "AquaPure Systems", amount: 620_000, payment: "cheque", recordedBy: "Director" }),
+    e(35, 5, { category: "payroll", description: "Monthly salaries, floor staff", vendor: "Staff payroll", amount: 6_650_000, payment: "bank", recordedBy: "Director" }),
+    e(34, 7, { category: "transport", description: "Diesel, weekly routes", vendor: "TotalEnergies", amount: 1_800_000, payment: "mobile", recordedBy: "Operations Mgr" }),
+    e(33, 9, { category: "water", description: "Municipal water bill", vendor: "NWSC", amount: 1_800_000, payment: "bank", recordedBy: "Director" }),
+    e(32, 10, { category: "power", description: "3-phase power token, line 1", vendor: "Umeme", amount: 2_800_000, payment: "bank", recordedBy: "Director" }),
+    e(31, 12, { category: "packaging", description: "PET preforms, 140g", vendor: "Nice House of Plastics", amount: 2_900_000, payment: "bank", recordedBy: "Director" }),
+    e(30, 14, { category: "transport", description: "Diesel, weekly routes", vendor: "TotalEnergies", amount: 1_750_000, payment: "mobile", recordedBy: "Operations Mgr" }),
+    e(29, 16, { category: "repairs", description: "Conveyor belt replacement", vendor: "Kampala Engineering", amount: 1_500_000, payment: "bank", recordedBy: "Director" }),
+    e(28, 20, { category: "power", description: "3-phase power token, line 1", vendor: "Umeme", amount: 2_800_000, payment: "bank", recordedBy: "Director" }),
+    e(27, 21, { category: "transport", description: "Diesel, weekly routes", vendor: "TotalEnergies", amount: 1_800_000, payment: "mobile", recordedBy: "Operations Mgr" }),
   ];
+  const expenses: Expense[] = [0, 1].flatMap((c) =>
+    cycle.map(([n, offset, rest]) => {
+      const num = n - c * cycle.length;
+      return { id: `e${num}`, ref: `EXP-${String(num).padStart(3, "0")}`, day: addDays(today, -(offset + 30 * c)), ...rest };
+    }),
+  );
 
-  const pattern: [number, number][] = [
-    [1_420_000, 280_000],
-    [1_610_000, 310_000],
-    [1_380_000, 220_000],
-    [1_900_000, 450_000],
-    [2_200_000, 520_000],
-    [1_750_000, 400_000],
+  // Past sales by weekday rhythm (Friday busiest, Sunday quietest), about RWF 48M a month.
+  // Litres: refills ≈ 4 L per 1,000 RWF (20 L at 5,000); new bottles ≈ 0.6 L per 1,000 RWF.
+  const rhythm: [refill: number, newBottle: number][] = [
+    [1_050_000, 220_000], // Sun
+    [1_200_000, 250_000], // Mon
+    [1_350_000, 280_000], // Tue
+    [1_150_000, 200_000], // Wed
+    [1_550_000, 350_000], // Thu
+    [1_800_000, 420_000], // Fri
+    [1_450_000, 330_000], // Sat
   ];
-  const weekBefore: DayVolume[] = pattern.map(([refill, newBottle], i) => ({
-    day: addDays(today, i - 6),
-    refill,
-    newBottle,
-  }));
+  const history: HistoryDay[] = [];
+  for (let offset = HISTORY_DAYS; offset >= 1; offset--) {
+    const day = addDays(today, -offset);
+    const [refill, newBottle] = rhythm[new Date(`${day}T00:00:00Z`).getUTCDay()];
+    history.push({ day, refill, newBottle, litres: Math.round(refill * 0.004 + newBottle * 0.0006) });
+  }
 
   return {
     today,
@@ -113,10 +118,8 @@ export function seed(today: string): OpsState {
     sales,
     expenses,
     resolutions: [],
-    monthRevenueBefore: (dayOfMonth - 1) * 1_550_000,
-    monthLitresBefore: (dayOfMonth - 1) * 620,
-    monthMixBefore: { b20: 0.51, d19: 0.25, j20: 0.115, b10: 0.07, p5: 0.055 },
-    weekBefore,
+    history,
+    historyMix: { b20: 0.51, d19: 0.25, j20: 0.115, b10: 0.07, p5: 0.055 },
     dayClosed: false,
   };
 }

@@ -41,7 +41,7 @@ export function Sheet({
         // Click on the backdrop (the dialog element itself, outside the panel) closes.
         if (e.target === ref.current) onClose();
       }}
-      className="m-0 mt-auto h-auto max-h-[92dvh] w-full max-w-none bg-transparent p-0 backdrop:bg-slate-900/40 backdrop:backdrop-blur-[4px] open:animate-sheet-up md:mt-0 md:ml-auto md:h-dvh md:max-h-none md:w-[440px] md:open:animate-sheet-in"
+      className="m-0 mt-auto h-fit max-h-[92dvh] w-full max-w-none bg-transparent p-0 backdrop:bg-slate-900/40 backdrop:backdrop-blur-[4px] open:animate-sheet-up md:mt-0 md:ml-auto md:h-dvh md:max-h-none md:w-[440px] md:open:animate-sheet-in"
     >
       <div className="flex max-h-[92dvh] flex-col rounded-t-2xl border border-slate-400/40 bg-white shadow-tier3 md:h-dvh md:max-h-none md:rounded-none md:rounded-l-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">

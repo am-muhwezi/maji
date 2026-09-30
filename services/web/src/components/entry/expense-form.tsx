@@ -30,7 +30,7 @@ export function ExpenseForm({ onDone }: { onDone: () => void }) {
         };
         setErrors(next);
         if (next.description || next.amount) return;
-        const ok = dispatch({ type: "recordExpense", category, description, vendor, amount, payment, approvedBy: "Operations Mgr" });
+        const ok = dispatch({ type: "recordExpense", category, description, vendor, amount, payment, recordedBy: CURRENT_USER.name });
         if (!ok) return;
         notify(`Expense saved: ${money(amount)}`);
         onDone();

@@ -16,13 +16,14 @@ describe("format", () => {
     expect(compact(850_000)).toBe("850K");
     expect(compact(1_250)).toBe("1.3K");
     expect(compact(900)).toBe("900");
-    expect(compact(-2_400_000)).toBe("-2.4M");
+    expect(compact(-2_400_000)).toBe("\u22122.4M");
     expect(compact(2_100_000_000)).toBe("2.1B");
   });
 
   it("signs numbers", () => {
     expect(signed(250)).toBe("+250");
-    expect(signed(-12)).toBe("-12");
+    expect(signed(-12)).toBe("\u221212");
+    expect(signed(-1234)).toBe("\u22121,234");
     expect(signed(0)).toBe("0");
   });
 

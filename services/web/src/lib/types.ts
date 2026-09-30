@@ -76,7 +76,8 @@ export interface Expense {
   vendor: string;
   amount: number;
   payment: ExpensePayment;
-  approvedBy: string;
+  /** Who entered or signed off the expense. */
+  recordedBy: string;
 }
 
 export type ResolutionKind = "spillage" | "recount" | "driver";
@@ -88,11 +89,19 @@ export interface VarianceResolution {
   day: string;
 }
 
-/** Daily sales in RWF for the weekly chart. */
+/** Sales for one day in RWF, split by kind. */
 export interface DayVolume {
   day: string;
   refill: number;
   newBottle: number;
+}
+
+/**
+ * Sales for a past day that are not itemised in `sales` (only recent receipts are kept
+ * line by line). Revenue for any period = history in range + itemised sales in range.
+ */
+export interface HistoryDay extends DayVolume {
+  litres: number;
 }
 
 export interface OpsState {
@@ -102,13 +111,10 @@ export interface OpsState {
   sales: Sale[];
   expenses: Expense[];
   resolutions: VarianceResolution[];
-  /** Sales before the first day covered by `sales`, this month. */
-  monthRevenueBefore: number;
-  monthLitresBefore: number;
-  /** Share of `monthRevenueBefore` per product (sums to 1). */
-  monthMixBefore: Record<ProductId, number>;
-  /** Prior days of the week (oldest first); today is computed from `sales`. */
-  weekBefore: DayVolume[];
+  /** One entry per past day (oldest first), never including today. */
+  history: HistoryDay[];
+  /** How `history` revenue splits across products (sums to 1). */
+  historyMix: Record<ProductId, number>;
   dayClosed: boolean;
   closedBy?: string;
 }

@@ -32,7 +32,8 @@ function ExplainForm({ productId, onDone }: { productId: ProductId; onDone: () =
   const { state, dispatch, notify } = useStore();
   const line = state.lines.find((l) => l.productId === productId)!;
   const existing = state.resolutions.find((r) => r.productId === productId && r.day === state.today);
-  const [kind, setKind] = useState<ResolutionKind>(existing?.kind ?? "spillage");
+  // No default: a reason must be a deliberate choice, never an accidental "breakage" in the record.
+  const [kind, setKind] = useState<ResolutionKind | null>(existing?.kind ?? null);
   const [note, setNote] = useState(existing?.note ?? "");
   const v = variance(line) ?? 0;
 
@@ -41,7 +42,7 @@ function ExplainForm({ productId, onDone }: { productId: ProductId; onDone: () =
       className="flex flex-col gap-5"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!dispatch({ type: "resolveVariance", productId, kind, note })) return;
+        if (!kind || !dispatch({ type: "resolveVariance", productId, kind, note })) return;
         notify(`${product(productId).name}: shortage explained`);
         onDone();
       }}
@@ -65,7 +66,9 @@ function ExplainForm({ productId, onDone }: { productId: ProductId; onDone: () =
         <Input id="explain-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Route 4 manifest missing 12 bottles" />
       </Field>
       <p className="text-[12px] text-slate-500">Found a counting mistake instead? Change the count on the Daily Log.</p>
-      <Button type="submit" variant="primary" className="w-full">Save explanation</Button>
+      <Button type="submit" variant="primary" className="w-full" disabled={!kind}>
+        {kind ? "Save explanation" : "Pick a reason first"}
+      </Button>
     </form>
   );
 }

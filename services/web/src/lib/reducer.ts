@@ -37,9 +37,11 @@ export type Action =
       vendor: string;
       amount: number;
       payment: ExpensePayment;
-      approvedBy: string;
+      recordedBy: string;
     }
   | { type: "markPaid"; saleId: string }
+  | { type: "voidSale"; saleId: string }
+  | { type: "deleteExpense"; expenseId: string }
   | { type: "resolveVariance"; productId: ProductId; kind: ResolutionKind; note: string }
   | { type: "closeDay"; by: string }
   | { type: "reopenDay" }
@@ -124,7 +126,7 @@ export function reduce(state: OpsState, action: Action): OpsState {
         vendor: action.vendor.trim() || "Not specified",
         amount: action.amount,
         payment: action.payment,
-        approvedBy: action.approvedBy,
+        recordedBy: action.recordedBy,
       };
       return { ...state, expenses: [expense, ...state.expenses] };
     }
@@ -136,6 +138,25 @@ export function reduce(state: OpsState, action: Action): OpsState {
         ...state,
         sales: state.sales.map((s) => (s.id === action.saleId ? { ...s, paidDay: state.today } : s)),
       };
+    }
+
+    case "voidSale": {
+      // Only today's receipts on an open day can be voided (to fix an entry mistake).
+      const target = state.sales.find((s) => s.id === action.saleId);
+      if (!target || target.day !== state.today || state.dayClosed) return state;
+      return {
+        ...state,
+        sales: state.sales.filter((s) => s.id !== action.saleId),
+        lines: state.lines.map((l) =>
+          l.productId === target.productId ? { ...l, sales: Math.max(0, l.sales - target.qty) } : l,
+        ),
+      };
+    }
+
+    case "deleteExpense": {
+      const target = state.expenses.find((e) => e.id === action.expenseId);
+      if (!target || target.day !== state.today) return state;
+      return { ...state, expenses: state.expenses.filter((e) => e.id !== action.expenseId) };
     }
 
     case "resolveVariance": {

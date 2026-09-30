@@ -323,7 +323,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar onHelp={() => setHelp(true)} />
       <div className="lg:pl-[72px] xl:pl-[260px] print:pl-0">
         <TopBar onHelp={() => setHelp(true)} />
-        <main id="main" className="mx-auto w-full max-w-[1440px] px-4 pt-6 pb-28 md:px-6 lg:pb-12 xl:px-8 xl:pt-8 print:max-w-none print:p-0">
+        <main id="main" className="mx-auto w-full max-w-[1440px] px-4 pt-6 pb-40 md:px-6 lg:pb-12 xl:px-8 xl:pt-8 print:max-w-none print:p-0">
           {children}
         </main>
       </div>

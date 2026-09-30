@@ -16,13 +16,16 @@ export function money(n: number): string {
   return `${CURRENCY} ${num(n)}`;
 }
 
+/** True minus sign (U+2212): same width as "+", no gap like a hyphen in tabular figures. */
+export const MINUS = "\u2212";
+
 /**
  * Short money for KPI tiles: 48_500_000 -> "48.5M", 850_000 -> "850K", 900 -> "900".
  * One decimal, trailing ".0" dropped.
  */
 export function compact(n: number): string {
   const abs = Math.abs(n);
-  const sign = n < 0 ? "-" : "";
+  const sign = n < 0 ? MINUS : "";
   const fmt = (v: number, unit: string) => `${sign}${trimZero(v.toFixed(1))}${unit}`;
   if (abs >= 1_000_000_000) return fmt(abs / 1_000_000_000, "B");
   if (abs >= 1_000_000) return fmt(abs / 1_000_000, "M");
@@ -34,10 +37,11 @@ function trimZero(s: string): string {
   return s.endsWith(".0") ? s.slice(0, -2) : s;
 }
 
-/** Signed with explicit "+", e.g. 250 -> "+250", -2 -> "-2", 0 -> "0". */
+/** Signed with explicit "+" and a true minus, e.g. 250 -> "+250", -2 -> "−2", 0 -> "0". */
 export function signed(n: number): string {
   if (n > 0) return `+${num(n)}`;
-  return num(n);
+  if (n < 0) return `${MINUS}${num(-n)}`;
+  return "0";
 }
 
 /** 0.357 -> "35.7%" (one decimal, trailing ".0" dropped). */

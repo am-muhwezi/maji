@@ -3,7 +3,7 @@
  * comes from a function in this file, so it is tested once and never re-derived in JSX.
  */
 import { EXPENSE_LABEL, product } from "./catalog";
-import { daysBetween } from "./format";
+import { addDays, daysBetween, monthName } from "./format";
 import type {
   DayVolume,
   Expense,
@@ -143,9 +143,45 @@ export function salesSummary(sales: Sale[]): SalesSummary {
   return s;
 }
 
+export interface Collected {
+  /** Paid at the counter today (cash + mobile money). */
+  atSale: number;
+  /** Old credit sales that customers paid today. */
+  creditRepaid: number;
+  total: number;
+  cash: number;
+  mobile: number;
+}
+
+/**
+ * Money that actually came in on `day`: today's non-credit sales plus any credit sale
+ * marked paid today (whatever day it was sold). This is what the cash drawer should hold.
+ */
+export function collectedOn(sales: Sale[], day: string): Collected {
+  const c: Collected = { atSale: 0, creditRepaid: 0, total: 0, cash: 0, mobile: 0 };
+  for (const s of sales) {
+    if (s.day === day && s.payment !== "credit") {
+      c.atSale += s.amount;
+      if (s.payment === "cash") c.cash += s.amount;
+      else c.mobile += s.amount;
+    }
+    if (s.payment === "credit" && s.paidDay === day) c.creditRepaid += s.amount;
+  }
+  c.total = c.atSale + c.creditRepaid;
+  return c;
+}
+
 /* ---------- Credit ---------- */
 
 export type AgingBucket = "current" | "due-soon" | "overdue";
+
+/** Display order and wording for money-owed buckets. Every page uses these. */
+export const AGING_ORDER: AgingBucket[] = ["overdue", "due-soon", "current"];
+export const AGING_LABEL: Record<AgingBucket, { label: string; hint: string }> = {
+  overdue: { label: "Overdue", hint: "Past the due date" },
+  "due-soon": { label: "Due within 7 days", hint: "Follow up this week" },
+  current: { label: "Not due yet", hint: "More than 7 days left" },
+};
 
 export interface Receivable {
   sale: Sale;
@@ -202,13 +238,45 @@ export function expensesByCategory(expenses: Expense[]): CategoryTotal[] {
     .sort((a, b) => b.amount - a.amount);
 }
 
-export function inMonth(day: string, today: string): boolean {
-  return day.slice(0, 7) === today.slice(0, 7);
+
+/* ---------- Periods ---------- */
+
+/** An inclusive range of ISO days with a human label. */
+export interface Period {
+  from: string;
+  to: string;
+  label: string;
+  /** Days in the range so far (for "per day" figures). */
+  days: number;
 }
 
-/* ---------- Month / week roll-ups ---------- */
+export function inPeriod(day: string, p: Pick<Period, "from" | "to">): boolean {
+  return day >= p.from && day <= p.to;
+}
 
-export interface MonthPnl {
+/** Calendar month containing today (offset 0) or the one before (offset -1). Never runs past today. */
+export function monthPeriod(today: string, offset: 0 | -1 = 0): Period {
+  const [y, m] = today.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1 + offset, 1));
+  const from = first.toISOString().slice(0, 10);
+  const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
+  const to = last < today ? last : today;
+  return { from, to, label: monthName(from), days: daysBetween(from, to) + 1 };
+}
+
+/** The last `n` days ending today. */
+export function rollingPeriod(today: string, n: number): Period {
+  return { from: addDays(today, -(n - 1)), to: today, label: `Last ${n} days`, days: n };
+}
+
+export function inMonth(day: string, today: string): boolean {
+  return inPeriod(day, monthPeriod(today));
+}
+
+/** @deprecated name kept for existing imports. */
+export type MonthPnl = PeriodPnl;
+
+export interface PeriodPnl {
   revenue: number;
   expenses: number;
   net: number;
@@ -216,21 +284,26 @@ export interface MonthPnl {
   litres: number;
 }
 
-export function monthPnl(state: OpsState): MonthPnl {
-  const monthSales = state.sales.filter((s) => inMonth(s.day, state.today));
-  const sum = salesSummary(monthSales);
-  const revenue = state.monthRevenueBefore + sum.total;
-  const expenses = state.expenses
-    .filter((e) => inMonth(e.day, state.today))
-    .reduce((a, e) => a + e.amount, 0);
+/** Profit and loss for a period: history + itemised sales in range, minus expenses in range. */
+export function periodPnl(state: OpsState, p: Period): PeriodPnl {
+  let revenue = 0;
+  let litres = 0;
+  for (const h of state.history) {
+    if (inPeriod(h.day, p)) {
+      revenue += h.refill + h.newBottle;
+      litres += h.litres;
+    }
+  }
+  const itemised = salesSummary(state.sales.filter((s) => inPeriod(s.day, p)));
+  revenue += itemised.total;
+  litres += itemised.litres;
+  const expenses = state.expenses.filter((e) => inPeriod(e.day, p)).reduce((a, e) => a + e.amount, 0);
   const net = revenue - expenses;
-  return {
-    revenue,
-    expenses,
-    net,
-    margin: revenue === 0 ? 0 : net / revenue,
-    litres: state.monthLitresBefore + sum.litres,
-  };
+  return { revenue, expenses, net, margin: revenue === 0 ? 0 : net / revenue, litres };
+}
+
+export function expensesIn(state: OpsState, p: Period): Expense[] {
+  return state.expenses.filter((e) => inPeriod(e.day, p));
 }
 
 export interface ProductRevenue {
@@ -240,14 +313,17 @@ export interface ProductRevenue {
   share: number;
 }
 
-/** Month revenue per product: baseline mix plus recorded sales this month. Largest first. */
-export function monthByProduct(state: OpsState): ProductRevenue[] {
+/** Revenue per product for a period (history split by `historyMix` + itemised sales). Largest first. */
+export function periodByProduct(state: OpsState, p: Period): ProductRevenue[] {
+  const historyTotal = state.history
+    .filter((h) => inPeriod(h.day, p))
+    .reduce((a, h) => a + h.refill + h.newBottle, 0);
   const sums = new Map<ProductId, number>();
-  for (const [id, share] of Object.entries(state.monthMixBefore) as [ProductId, number][]) {
-    sums.set(id, Math.round(state.monthRevenueBefore * share));
+  for (const [id, share] of Object.entries(state.historyMix) as [ProductId, number][]) {
+    sums.set(id, Math.round(historyTotal * share));
   }
   for (const s of state.sales) {
-    if (inMonth(s.day, state.today)) sums.set(s.productId, (sums.get(s.productId) ?? 0) + s.amount);
+    if (inPeriod(s.day, p)) sums.set(s.productId, (sums.get(s.productId) ?? 0) + s.amount);
   }
   const total = [...sums.values()].reduce((a, b) => a + b, 0);
   return [...sums.entries()]
@@ -255,13 +331,38 @@ export function monthByProduct(state: OpsState): ProductRevenue[] {
     .sort((a, b) => b.amount - a.amount);
 }
 
-/** Last 7 days (oldest first) with today computed live from recorded sales. */
-export function weekVolumes(state: OpsState): DayVolume[] {
-  const todays = salesOn(state.sales, state.today);
-  const today: DayVolume = { day: state.today, refill: 0, newBottle: 0 };
-  for (const s of todays) {
-    if (s.kind === "new") today.newBottle += s.amount;
-    else today.refill += s.amount;
+/** One entry per day of the period (oldest first), history plus itemised sales split by kind. */
+export function dailyVolumes(state: OpsState, p: Period): DayVolume[] {
+  const byDay = new Map<string, DayVolume>();
+  for (let d = p.from; d <= p.to; d = addDays(d, 1)) byDay.set(d, { day: d, refill: 0, newBottle: 0 });
+  for (const h of state.history) {
+    const v = byDay.get(h.day);
+    if (v) {
+      v.refill += h.refill;
+      v.newBottle += h.newBottle;
+    }
   }
-  return [...state.weekBefore.slice(-6), today];
+  for (const s of state.sales) {
+    const v = byDay.get(s.day);
+    if (!v) continue;
+    if (s.kind === "new") v.newBottle += s.amount;
+    else v.refill += s.amount;
+  }
+  return [...byDay.values()];
+}
+
+/* ---------- Shorthands used by pages ---------- */
+
+/** Calendar month to date. */
+export function monthPnl(state: OpsState): PeriodPnl {
+  return periodPnl(state, monthPeriod(state.today));
+}
+
+export function monthByProduct(state: OpsState): ProductRevenue[] {
+  return periodByProduct(state, monthPeriod(state.today));
+}
+
+/** Last 7 days ending today, oldest first. */
+export function weekVolumes(state: OpsState): DayVolume[] {
+  return dailyVolumes(state, rollingPeriod(state.today, 7));
 }

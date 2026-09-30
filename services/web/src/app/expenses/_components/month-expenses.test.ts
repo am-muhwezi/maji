@@ -4,7 +4,7 @@ import { filterExpenses, newestFirst, sumAmount } from "./month-expenses";
 
 const x = (ref: string, day: string, rest: Partial<Expense> = {}): Expense => ({
   id: ref, ref, day, category: "power", description: "Power token", vendor: "Umeme",
-  amount: 100, payment: "bank", approvedBy: "Director", ...rest,
+  amount: 100, payment: "bank", recordedBy: "Director", ...rest,
 });
 
 describe("month expenses", () => {

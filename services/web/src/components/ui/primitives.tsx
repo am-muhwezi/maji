@@ -139,7 +139,7 @@ export function Kpi({
   unit?: string;
   icon: LucideIcon;
   foot?: ReactNode;
-  footTone?: "neutral" | "up" | "down";
+  footTone?: "neutral" | "up" | "down" | "warning";
   valueTone?: "ink" | "brand" | "danger";
   href?: string;
 }) {
@@ -171,6 +171,7 @@ export function Kpi({
             footTone === "neutral" && "text-slate-500",
             footTone === "up" && "text-emerald-700",
             footTone === "down" && "text-rose-600",
+            footTone === "warning" && "text-amber-700",
           )}
         >
           {foot}
@@ -188,9 +189,9 @@ export function Kpi({
   );
 }
 
-export function KpiGrid({ children, cols = 4 }: { children: ReactNode; cols?: 3 | 4 }) {
+export function KpiGrid({ children, cols = 4, className }: { children: ReactNode; cols?: 3 | 4; className?: string }) {
   return (
-    <div className={clsx("grid grid-cols-2 gap-3 sm:gap-4", cols === 4 ? "xl:grid-cols-4" : "lg:grid-cols-3")}>
+    <div className={clsx("grid grid-cols-2 gap-3 sm:gap-4", cols === 4 ? "xl:grid-cols-4" : "lg:grid-cols-3", className)}>
       {children}
     </div>
   );

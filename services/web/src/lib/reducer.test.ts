@@ -73,13 +73,13 @@ describe("closing the day", () => {
 
 describe("expenses and payments", () => {
   it("records an expense with the next reference at the top", () => {
-    const next = reduce(seed(TODAY), { type: "recordExpense", category: "transport", description: "Diesel", vendor: "", amount: 200_000, payment: "cash", approvedBy: "Ops" });
+    const next = reduce(seed(TODAY), { type: "recordExpense", category: "transport", description: "Diesel", vendor: "", amount: 200_000, payment: "cash", recordedBy: "Ops" });
     expect(next.expenses[0]).toMatchObject({ ref: "EXP-042", vendor: "Not specified", day: TODAY, amount: 200_000 });
   });
 
   it("rejects zero amounts and blank descriptions", () => {
     const s = seed(TODAY);
-    const base = { type: "recordExpense" as const, category: "power" as const, vendor: "", payment: "cash" as const, approvedBy: "" };
+    const base = { type: "recordExpense" as const, category: "power" as const, vendor: "", payment: "cash" as const, recordedBy: "" };
     expect(reduce(s, { ...base, description: "x", amount: 0 })).toBe(s);
     expect(reduce(s, { ...base, description: " ", amount: 10 })).toBe(s);
   });
@@ -119,5 +119,30 @@ describe("store load/save ordering", () => {
     expect(storeReduce(fresh, { type: "load", saved: null })).toEqual({ ops: fresh.ops, loaded: true });
     // Invalid actions are still no-ops by identity.
     expect(storeReduce(loaded, { type: "recordProduction", productId: "b20", qty: 0 })).toBe(loaded);
+  });
+});
+
+describe("corrections", () => {
+  it("voids today's receipt and gives the stock back", () => {
+    const s = seed(TODAY);
+    const v = reduce(s, { type: "voidSale", saleId: "s1090" }); // Kireka, 15 × 20L
+    expect(v.sales.find((x) => x.id === "s1090")).toBeUndefined();
+    expect(v.lines.find((l) => l.productId === "b20")!.sales).toBe(181 - 15);
+  });
+
+  it("refuses to void older receipts, unknown ids, or on a closed day", () => {
+    const s = seed(TODAY);
+    expect(reduce(s, { type: "voidSale", saleId: "s1063" })).toBe(s); // 23 days old
+    expect(reduce(s, { type: "voidSale", saleId: "nope" })).toBe(s);
+    const closed = { ...s, dayClosed: true };
+    expect(reduce(closed, { type: "voidSale", saleId: "s1090" })).toBe(closed);
+  });
+
+  it("deletes only today's expenses", () => {
+    const s = seed(TODAY);
+    const today = s.expenses.find((e) => e.day === TODAY)!;
+    const older = s.expenses.find((e) => e.day !== TODAY)!;
+    expect(reduce(s, { type: "deleteExpense", expenseId: today.id }).expenses).toHaveLength(s.expenses.length - 1);
+    expect(reduce(s, { type: "deleteExpense", expenseId: older.id })).toBe(s);
   });
 });

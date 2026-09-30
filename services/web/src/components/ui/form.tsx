@@ -85,7 +85,7 @@ export function Stepper({ value, onChange, min = 0, max = 100_000, label, id }: 
 }
 
 /** Radio cards for a small set of choices (payment method, sale type). */
-export function ChoiceGroup<T extends string>({ value, onChange, options, label, columns = 2 }: { value: T; onChange: (v: T) => void; options: { value: T; label: string; hint?: string }[]; label: string; columns?: 2 | 3 | 4 }) {
+export function ChoiceGroup<T extends string>({ value, onChange, options, label, columns = 2 }: { value: T | null; onChange: (v: T) => void; options: { value: T; label: string; hint?: string }[]; label: string; columns?: 2 | 3 | 4 }) {
   return (
     <fieldset>
       <legend className="mb-1.5 text-[13px] font-medium text-slate-700">{label}</legend>

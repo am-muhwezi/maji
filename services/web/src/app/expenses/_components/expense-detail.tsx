@@ -27,7 +27,7 @@ export function ExpenseDetail({ expense, monthTotal, onClose }: { expense: Expen
           <dl className="divide-y divide-line-soft">
             <StatRow label="Paid to" value={expense.vendor} />
             <StatRow label="Paid by" value={EXPENSE_PAYMENT_LABEL[expense.payment]} />
-            <StatRow label="Approved by" value={expense.approvedBy} />
+            <StatRow label="Recorded by" value={expense.recordedBy} />
             <StatRow label="Date" value={day(expense.day)} />
             <StatRow label="Reference" value={expense.ref} />
             <StatRow label="Share of this month's spending" value={pct(ratio(expense.amount, monthTotal))} />
