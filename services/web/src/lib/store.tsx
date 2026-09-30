@@ -34,34 +34,38 @@ export function loadSaved(raw: string | null, today: string): OpsState | null {
   }
 }
 
+/** Store state: the ops data plus whether saved data has been loaded yet. */
+export interface StoreState {
+  ops: OpsState;
+  /** False until the browser's saved data has been applied; nothing is saved before that. */
+  loaded: boolean;
+}
+
+export type StoreAction = Action | { type: "load"; saved: OpsState | null };
+
+/**
+ * "load" marks the store loaded in the same update that applies saved data, so the save
+ * effect can never run with pre-load state. (A ref flag set in an effect is not enough:
+ * StrictMode re-runs effects and the save effect would write the seed over saved data.)
+ */
+export function storeReduce(s: StoreState, a: StoreAction): StoreState {
+  if (a.type === "load") return s.loaded ? s : { ops: a.saved ?? s.ops, loaded: true };
+  const ops = reduce(s.ops, a);
+  return ops === s.ops ? s : { ...s, ops };
+}
+
 export function StoreProvider({ children, today }: { children: React.ReactNode; today?: string }) {
   const initialDay = today ?? isoDay(new Date());
-  const [state, rawDispatch] = useReducer(
-    (s: OpsState, a: Action | { type: "hydrate"; state: OpsState }) =>
-      a.type === "hydrate" ? a.state : reduce(s, a),
-    initialDay,
-    seed,
-  );
+  const [store, rawDispatch] = useReducer(storeReduce, initialDay, (d): StoreState => ({ ops: seed(d), loaded: false }));
+  const state = store.ops;
   const [toast, setToast] = useState<Toast | null>(null);
-  const hydrated = useRef(false);
   const stateRef = useRef(state);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
-  // Persist every change after hydration. Declared before the load effect so the
-  // mount pass never overwrites saved data with the seed.
-  useEffect(() => {
-    if (!hydrated.current) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      // Storage full or blocked: the app keeps working for this session.
-    }
-  }, [state]);
-
-  // Load saved state once on mount.
+  // Load saved state once on mount (idempotent: a second "load" is ignored).
   useEffect(() => {
     let saved: OpsState | null = null;
     try {
@@ -69,9 +73,18 @@ export function StoreProvider({ children, today }: { children: React.ReactNode; 
     } catch {
       saved = null;
     }
-    if (saved) rawDispatch({ type: "hydrate", state: saved });
-    hydrated.current = true;
+    rawDispatch({ type: "load", saved });
   }, [initialDay]);
+
+  // Save every change, but only after the load has been applied.
+  useEffect(() => {
+    if (!store.loaded) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(store.ops));
+    } catch {
+      // Storage full or blocked: the app keeps working for this session.
+    }
+  }, [store]);
 
   const notify = useCallback((message: string, tone: Toast["tone"] = "success") => {
     setToast({ id: Date.now(), message, tone });

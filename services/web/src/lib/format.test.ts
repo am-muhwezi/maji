@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { addDays, compact, day, daysBetween, isoDay, longDay, monthName, num, pct, ratio, shortDay, signed, ugx, weekday } from "./format";
+import { CURRENCY, addDays, compact, day, daysBetween, isoDay, longDay, monthName, num, pct, ratio, shortDay, signed, money, weekday } from "./format";
 
 describe("format", () => {
   it("groups thousands and rounds", () => {
     expect(num(1234567)).toBe("1,234,567");
     expect(num(0)).toBe("0");
     expect(num(999.6)).toBe("1,000");
-    expect(ugx(75000)).toBe("UGX 75,000");
+    expect(money(75000)).toBe("RWF 75,000");
+    expect(CURRENCY).toBe("RWF");
   });
 
   it("compacts money for tiles", () => {

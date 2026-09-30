@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { useState } from "react";
-import { compact, pct, ugx } from "@/lib/format";
+import { compact, pct, money } from "@/lib/format";
 
 /**
  * Series colors validated with the dataviz skill's validate_palette.js (light mode):
@@ -39,7 +39,7 @@ export function StackedColumns({
   return (
     <figure>
       <figcaption className="sr-only">
-        {data.map((d) => `${d.label}: ${seriesA} ${ugx(d.a)}, ${seriesB} ${ugx(d.b)}`).join("; ")}
+        {data.map((d) => `${d.label}: ${seriesA} ${money(d.a)}, ${seriesB} ${money(d.b)}`).join("; ")}
       </figcaption>
       <div className="flex gap-3" style={{ height }}>
         <div className="tnum relative w-9 shrink-0 text-right text-[11px] text-slate-400" aria-hidden>
@@ -60,7 +60,7 @@ export function StackedColumns({
                 <button
                   key={d.label}
                   type="button"
-                  aria-label={`${d.label}: total ${ugx(total)}`}
+                  aria-label={`${d.label}: total ${money(total)}`}
                   onMouseEnter={() => setHover(i)}
                   onMouseLeave={() => setHover(null)}
                   onFocus={() => setHover(i)}
@@ -74,8 +74,8 @@ export function StackedColumns({
                   {hover === i && (
                     <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-44 -translate-x-1/2 rounded-md border border-slate-300 bg-white p-2.5 text-left shadow-tier2">
                       <span className="block text-[12px] font-semibold text-ink">{d.label}</span>
-                      <TipRow color={SERIES.primary} label={seriesA} value={ugx(d.a)} />
-                      <TipRow color={SERIES.secondary} label={seriesB} value={ugx(d.b)} />
+                      <TipRow color={SERIES.primary} label={seriesA} value={money(d.a)} />
+                      <TipRow color={SERIES.secondary} label={seriesB} value={money(d.b)} />
                       <span className="mt-1 flex justify-between border-t border-line-soft pt-1 text-[12px] font-semibold text-ink">
                         <span>Total</span>
                         <span className="tnum">{compact(total)}</span>
@@ -129,7 +129,7 @@ export function Legend({ items }: { items: { color: string; label: string; value
  * Ranked horizontal bars in a single hue: length encodes magnitude, labels carry identity.
  * Used for "share of total" breakdowns instead of a donut or a multi-hue stacked bar.
  */
-export function RankedBars({ rows, format = ugx }: { rows: { label: string; value: number; share: number; note?: string }[]; format?: (n: number) => string }) {
+export function RankedBars({ rows, format = money }: { rows: { label: string; value: number; share: number; note?: string }[]; format?: (n: number) => string }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
   return (
     <ul className="flex flex-col gap-3.5">

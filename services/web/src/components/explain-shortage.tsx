@@ -5,7 +5,7 @@ import { ChoiceGroup, Field, Input } from "@/components/ui/form";
 import { Button } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/sheet";
 import { product } from "@/lib/catalog";
-import { num, ugx } from "@/lib/format";
+import { num, money } from "@/lib/format";
 import { expected, variance, varianceValue } from "@/lib/ledger";
 import { useStore } from "@/lib/store";
 import type { ProductId, ResolutionKind } from "@/lib/types";
@@ -52,7 +52,7 @@ function ExplainForm({ productId, onDone }: { productId: ProductId; onDone: () =
         <div><dt className="text-[12px] text-slate-500">Missing</dt><dd className="tnum text-lg font-semibold text-rose-600">{num(-v)}</dd></div>
       </dl>
       <p className="-mt-2 text-[13px] text-slate-600">
-        {product(productId).name}, worth about <span className="tnum font-semibold text-ink">{ugx(-varianceValue(line))}</span> at refill price.
+        {product(productId).name}, worth about <span className="tnum font-semibold text-ink">{money(-varianceValue(line))}</span> at refill price.
       </p>
       <ChoiceGroup
         label="Reason"

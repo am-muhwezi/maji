@@ -11,9 +11,9 @@ describe("recordSale", () => {
     const s = seed(TODAY);
     const next = reduce(s, { type: "recordSale", customer: "  Kisenyi Shop ", productId: "b20", kind: "new", qty: 3, payment: "cash", time: "15:00" });
     const sale = next.sales.at(-1)!;
-    expect(sale).toMatchObject({ receipt: "SL-1090", customer: "Kisenyi Shop", amount: 105_000, day: TODAY, dueDay: undefined });
-    expect(next.lines.find((l) => l.productId === "b20")!.sales).toBe(243);
-    expect(s.lines.find((l) => l.productId === "b20")!.sales).toBe(240); // original untouched
+    expect(sale).toMatchObject({ receipt: "SL-1091", customer: "Kisenyi Shop", amount: 105_000, day: TODAY, dueDay: undefined });
+    expect(next.lines.find((l) => l.productId === "b20")!.sales).toBe(184);
+    expect(s.lines.find((l) => l.productId === "b20")!.sales).toBe(181); // original untouched
   });
 
   it("sets a due date on credit sales", () => {
@@ -102,5 +102,22 @@ describe("persistence", () => {
     expect(loadSaved("{not json", TODAY)).toBeNull();
     expect(loadSaved(null, TODAY)).toBeNull();
     expect(loadSaved(JSON.stringify({ today: TODAY }), TODAY)).toBeNull();
+  });
+});
+
+describe("store load/save ordering", () => {
+  it("applies saved data exactly once and never before load", async () => {
+    const { storeReduce } = await import("./store");
+    const fresh = { ops: seed(TODAY), loaded: false };
+    const saved = reduce(seed(TODAY), { type: "markPaid", saleId: "s1041" });
+    const loaded = storeReduce(fresh, { type: "load", saved });
+    expect(loaded).toEqual({ ops: saved, loaded: true });
+    // StrictMode runs the load effect twice; the second load must not clobber later edits.
+    const edited = storeReduce(loaded, { type: "recordProduction", productId: "b20", qty: 5 });
+    expect(storeReduce(edited, { type: "load", saved: seed(TODAY) })).toBe(edited);
+    // No saved data: keep the seed but mark loaded so saving can start.
+    expect(storeReduce(fresh, { type: "load", saved: null })).toEqual({ ops: fresh.ops, loaded: true });
+    // Invalid actions are still no-ops by identity.
+    expect(storeReduce(loaded, { type: "recordProduction", productId: "b20", qty: 0 })).toBe(loaded);
   });
 });

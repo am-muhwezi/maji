@@ -88,7 +88,7 @@ export interface VarianceResolution {
   day: string;
 }
 
-/** Daily sales in UGX for the weekly chart. */
+/** Daily sales in RWF for the weekly chart. */
 export interface DayVolume {
   day: string;
   refill: number;

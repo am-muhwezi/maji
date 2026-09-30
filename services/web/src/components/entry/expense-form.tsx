@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/primitives";
 import { ChoiceGroup, Field, Input, Select } from "@/components/ui/form";
 import { CURRENT_USER, EXPENSE_LABEL, EXPENSE_PAYMENT_LABEL } from "@/lib/catalog";
-import { ugx } from "@/lib/format";
+import { money, num } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { ExpenseCategory, ExpensePayment } from "@/lib/types";
 
@@ -32,7 +32,7 @@ export function ExpenseForm({ onDone }: { onDone: () => void }) {
         if (next.description || next.amount) return;
         const ok = dispatch({ type: "recordExpense", category, description, vendor, amount, payment, approvedBy: "Operations Mgr" });
         if (!ok) return;
-        notify(`Expense saved: ${ugx(amount)}`);
+        notify(`Expense saved: ${money(amount)}`);
         onDone();
       }}
     >
@@ -44,17 +44,17 @@ export function ExpenseForm({ onDone }: { onDone: () => void }) {
         </Select>
       </Field>
       <Field label="What was it for?" htmlFor="exp-desc" error={errors.description}>
-        <Input id="exp-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Diesel for truck UBG-112" />
+        <Input id="exp-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Diesel for delivery truck 2" />
       </Field>
       <Field label="Paid to" htmlFor="exp-vendor" hint="Optional">
         <Input id="exp-vendor" value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="e.g. TotalEnergies" />
       </Field>
-      <Field label="Amount (UGX)" htmlFor="exp-amount" error={errors.amount}>
+      <Field label="Amount (RWF)" htmlFor="exp-amount" error={errors.amount}>
         <Input
           id="exp-amount"
           inputMode="numeric"
           className="tnum"
-          value={amount ? amount.toLocaleString("en-UG") : amountText}
+          value={amount ? num(amount) : amountText}
           onChange={(e) => setAmountText(e.target.value)}
           placeholder="0"
         />

@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 /**
  * Slide-over panel on desktop, bottom sheet on phones. Built on native <dialog>
@@ -23,6 +23,7 @@ export function Sheet({
   footer?: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const d = ref.current;
@@ -34,7 +35,7 @@ export function Sheet({
   return (
     <dialog
       ref={ref}
-      aria-labelledby="sheet-title"
+      aria-labelledby={titleId}
       onClose={onClose}
       onClick={(e) => {
         // Click on the backdrop (the dialog element itself, outside the panel) closes.
@@ -45,7 +46,7 @@ export function Sheet({
       <div className="flex max-h-[92dvh] flex-col rounded-t-2xl border border-slate-400/40 bg-white shadow-tier3 md:h-dvh md:max-h-none md:rounded-none md:rounded-l-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
           <div>
-            <h2 id="sheet-title" className="text-lg font-semibold text-ink">{title}</h2>
+            <h2 id={titleId} className="text-lg font-semibold text-ink">{title}</h2>
             {description && <p className="mt-0.5 text-[13px] text-slate-500">{description}</p>}
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="-mr-2 grid size-9 place-items-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-ink">

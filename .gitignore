@@ -2,3 +2,4 @@
 node_modules/
 # Stitch screenshots are design references, kept out of git (binaries).
 stitch_water_business_management_dashboard/**/*.png
+services/web/scripts/tmp-*

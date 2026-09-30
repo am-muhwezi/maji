@@ -10,7 +10,7 @@ import { useQuickEntry } from "@/components/entry/quick-entry";
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/primitives";
 import { CURRENT_USER, PLANT_NAME, product } from "@/lib/catalog";
-import { longDay, signed, ugx } from "@/lib/format";
+import { longDay, signed, money } from "@/lib/format";
 import { openShortages, receivables } from "@/lib/ledger";
 import { useStore } from "@/lib/store";
 import { isActive, NAV } from "./nav";
@@ -34,7 +34,7 @@ function useAlerts(): AlertItem[] {
     items.push({ id: `short-${l.productId}`, tone: "danger", title: `${p.name}: ${signed(v)} units short`, detail: "Count does not match expected stock", href: "/stock" });
   }
   for (const r of receivables(state.sales, state.today).filter((r) => r.bucket === "overdue")) {
-    items.push({ id: `od-${r.sale.id}`, tone: "warning", title: `${r.sale.customer} is ${-r.dueIn} days overdue`, detail: `${ugx(r.sale.amount)} unpaid`, href: "/sales?show=owed" });
+    items.push({ id: `od-${r.sale.id}`, tone: "warning", title: `${r.sale.customer} is ${-r.dueIn} days overdue`, detail: `${money(r.sale.amount)} unpaid`, href: "/sales?show=owed" });
   }
   return items;
 }
@@ -48,7 +48,7 @@ function Sidebar({ onHelp }: { onHelp: () => void }) {
   const shortages = openShortages(state).length;
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[72px] flex-col border-r border-line bg-white lg:flex xl:w-[260px]">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[72px] flex-col border-r border-line bg-white lg:flex xl:w-[260px] print:hidden">
       <div className="flex h-16 items-center justify-center px-4 xl:justify-start xl:px-5">
         <span className="xl:hidden"><LogoMark /></span>
         <span className="hidden xl:block"><Logo /></span>
@@ -174,15 +174,15 @@ function AlertsButton() {
 function TopBar({ onHelp }: { onHelp: () => void }) {
   const { state } = useStore();
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-white/85 px-4 backdrop-blur md:px-6 xl:px-8">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-white/85 px-4 backdrop-blur md:px-6 xl:px-8 print:static print:border-0 print:px-0">
       <span className="lg:hidden"><LogoMark /></span>
       <div className="min-w-0">
         <div className="truncate text-sm font-semibold text-ink" suppressHydrationWarning>{longDay(state.today)}</div>
         <div className="truncate text-[12px] text-slate-500">
-          {state.dayClosed ? "Day closed" : "Shift open"} · All amounts in UGX
+          {state.dayClosed ? "Day closed" : "Shift open"} · All amounts in RWF
         </div>
       </div>
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex items-center gap-1 print:hidden">
         <button type="button" onClick={onHelp} className="grid size-10 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-ink lg:hidden" aria-label="How this works">
           <CircleHelp className="size-5" aria-hidden />
         </button>
@@ -220,11 +220,11 @@ function PhoneNav() {
         type="button"
         onClick={() => openEntry()}
         aria-label="New entry"
-        className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 grid size-14 place-items-center rounded-full bg-brand text-white shadow-tier3 hover:bg-brand-hover active:bg-brand-active lg:hidden"
+        className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 grid size-14 place-items-center rounded-full bg-brand text-white shadow-tier3 hover:bg-brand-hover active:bg-brand-active lg:hidden print:hidden"
       >
         <Plus className="size-6" aria-hidden />
       </button>
-      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 flex h-[calc(4rem+env(safe-area-inset-bottom))] border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 flex h-[calc(4rem+env(safe-area-inset-bottom))] border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden">
         {tabs.map((t) => (
           <Tab key={t.href} href={t.href} label={t.short} icon={t.icon} active={isActive(pathname, t.href)} />
         ))}
@@ -302,7 +302,7 @@ function HelpSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
 function Toaster() {
   const { toast } = useStore();
   return (
-    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 flex justify-center px-4 lg:bottom-6">
+    <div aria-live="polite" className="print:hidden pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 flex justify-center px-4 lg:bottom-6">
       {toast && (
         <div key={toast.id} className={clsx("pointer-events-auto flex animate-sheet-up items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-tier3", toast.tone === "success" ? "bg-slate-900" : "bg-rose-600")}>
           {toast.tone === "success" ? <CheckCircle2 className="size-4 text-emerald-400" aria-hidden /> : <TriangleAlert className="size-4" aria-hidden />}
@@ -321,9 +321,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:shadow-tier2">Skip to content</a>
       <Sidebar onHelp={() => setHelp(true)} />
-      <div className="lg:pl-[72px] xl:pl-[260px]">
+      <div className="lg:pl-[72px] xl:pl-[260px] print:pl-0">
         <TopBar onHelp={() => setHelp(true)} />
-        <main id="main" className="mx-auto w-full max-w-[1440px] px-4 pt-6 pb-28 md:px-6 lg:pb-12 xl:px-8 xl:pt-8">
+        <main id="main" className="mx-auto w-full max-w-[1440px] px-4 pt-6 pb-28 md:px-6 lg:pb-12 xl:px-8 xl:pt-8 print:max-w-none print:p-0">
           {children}
         </main>
       </div>

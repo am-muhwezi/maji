@@ -1,0 +1,69 @@
+import { Card, CardHeader, StatRow } from "@/components/ui/primitives";
+import { num, pct } from "@/lib/format";
+import type { CategoryTotal, MonthPnl } from "@/lib/ledger";
+
+/** Costs read as money going out: a true minus sign, never a bare number. */
+function out(n: number): string {
+  return `−${num(n)}`;
+}
+
+/** The accountant's view: sales, each cost line, total costs, net income. */
+export function PnlCard({ pnl, costs, className }: { pnl: MonthPnl; costs: CategoryTotal[]; className?: string }) {
+  return (
+    <Card className={className}>
+      <CardHeader
+        title="Profit and loss"
+        hint="Money in from sales, minus every cost this month."
+        action={<span className="text-[12px] font-medium text-slate-500">Amounts in RWF</span>}
+      />
+      <div className="px-5 pb-5">
+        <dl className="divide-y divide-line-soft">
+          <StatRow label={<span className="font-medium text-ink">Sales</span>} value={num(pnl.revenue)} strong />
+        </dl>
+
+        <p className="mt-4 mb-1 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">Costs</p>
+        {costs.length === 0 ? (
+          <p className="py-2 text-sm text-slate-500">No costs recorded this month.</p>
+        ) : (
+          <dl className="divide-y divide-line-soft">
+            {costs.map((c) => (
+              <StatRow
+                key={c.category}
+                label={
+                  <>
+                    {c.label}
+                    <span className="tnum ml-1.5 text-[12px] text-slate-400">{pct(c.share)}</span>
+                  </>
+                }
+                value={out(c.amount)}
+              />
+            ))}
+          </dl>
+        )}
+        <dl className="border-t border-line">
+          <StatRow label={<span className="font-medium text-ink">Total costs</span>} value={out(pnl.expenses)} strong />
+        </dl>
+
+        <div className="mt-3 rounded-lg bg-sky-50 px-4 py-3 print:border print:border-slate-300 print:bg-white">
+          <dl>
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="text-sm font-semibold text-ink">Net income</dt>
+              <dd className={`tnum text-right text-xl font-semibold ${pnl.net < 0 ? "text-rose-600" : "text-brand"}`}>
+                {pnl.net < 0 ? out(-pnl.net) : num(pnl.net)}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-0.5 text-[13px] text-slate-600">
+            {pnl.net < 0 ? (
+              <>Costs are higher than sales this month.</>
+            ) : (
+              <>
+                <span className="tnum font-semibold text-ink">{pct(pnl.margin)}</span> of every franc sold is kept as profit.
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
+}

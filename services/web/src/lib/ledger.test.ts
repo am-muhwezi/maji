@@ -137,8 +137,8 @@ describe("expenses and roll-ups", () => {
   it("computes the month P&L from baseline plus recorded sales in this month", () => {
     const s = seed(TODAY);
     const p = monthPnl(s);
-    // 29 prior days × 1.55M + today's receipts (2.648M) + in-month older credit (0.52M + 0.23M + 0.38M).
-    expect(p.revenue).toBe(29 * 1_550_000 + 2_648_000 + 1_130_000);
+    // 29 prior days × 1.55M + today's receipts (2.918M) + in-month older credit (0.52M + 0.23M + 0.38M).
+    expect(p.revenue).toBe(29 * 1_550_000 + 2_918_000 + 1_130_000);
     expect(p.expenses).toBe(31_200_000);
     expect(p.net).toBe(p.revenue - p.expenses);
     expect(p.margin).toBeCloseTo(p.net / p.revenue, 10);
@@ -148,11 +148,23 @@ describe("expenses and roll-ups", () => {
     const s = seed(TODAY);
     const rows = monthByProduct(s);
     const sum = rows.reduce((a, r) => a + r.amount, 0);
-    // Baseline shares are rounded per product, so allow a few shillings of drift.
+    // Baseline shares are rounded per product, so allow a few francs of drift.
     expect(Math.abs(sum - monthPnl(s).revenue)).toBeLessThan(5);
     expect(rows[0].productId).toBe("b20");
     expect(rows.reduce((a, r) => a + r.share, 0)).toBeCloseTo(1, 10);
     expect(Object.values(s.monthMixBefore).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 10);
+  });
+
+  it("seed ledger agrees with today's receipts and keeps the sample shortages", () => {
+    const s = seed(TODAY);
+    for (const l of s.lines) {
+      const sold = s.sales.filter((x) => x.day === TODAY && x.productId === l.productId).reduce((a, x) => a + x.qty, 0);
+      expect(l.sales).toBe(sold);
+    }
+    expect(s.lines.map((l) => variance(l))).toEqual([-2, 0, -12, null, null]);
+    const receipts = s.sales.filter((x) => x.day === TODAY).map((x) => [x.time, Number(x.receipt.slice(3))]);
+    const byTime = [...receipts].sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+    expect(byTime.map((r) => r[1])).toEqual([...byTime.map((r) => r[1])].sort((a, b) => Number(a) - Number(b)));
   });
 
   it("keeps expenses inside the current month early in a month", () => {
@@ -168,7 +180,7 @@ describe("expenses and roll-ups", () => {
     expect(w[6].day).toBe(TODAY);
     expect(w[0].day).toBe("2026-09-24");
     expect(w[6].newBottle).toBe(70_000 + 700_000 + 140_000);
-    expect(w[6].refill + w[6].newBottle).toBe(2_648_000);
+    expect(w[6].refill + w[6].newBottle).toBe(2_918_000);
   });
 
   it("flags materials at or below reorder level", () => {

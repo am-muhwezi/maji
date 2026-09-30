@@ -1,15 +1,19 @@
-/** Number and date formatting. All money is Uganda Shillings (no minor units). */
+/** Number and date formatting. All money is Rwandan francs (RWF, no minor units). */
 
-const grouped = new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 });
+/** ISO 4217 code shown next to every amount. Change it here to switch the whole app. */
+export const CURRENCY = "RWF";
+
+// "en-US" grouping (1,234,567) is present in every ICU build, so server and browser agree.
+const grouped = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
 /** 1234567 -> "1,234,567" */
 export function num(n: number): string {
   return grouped.format(Math.round(n));
 }
 
-/** 1234567 -> "UGX 1,234,567" */
-export function ugx(n: number): string {
-  return `UGX ${num(n)}`;
+/** 1234567 -> "RWF 1,234,567" */
+export function money(n: number): string {
+  return `${CURRENCY} ${num(n)}`;
 }
 
 /**

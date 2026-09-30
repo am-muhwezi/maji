@@ -14,14 +14,6 @@ export function seed(today: string): OpsState {
     return d < monthStart ? monthStart : d;
   };
 
-  const lines: StockLine[] = [
-    { productId: "b20", opening: 340, production: 250, sales: 240, physical: 348 },
-    { productId: "j20", opening: 180, production: 120, sales: 105, physical: 195 },
-    { productId: "d19", opening: 210, production: 100, sales: 98, physical: 200 },
-    { productId: "b10", opening: 150, production: 60, sales: 50, physical: null },
-    { productId: "p5", opening: 280, production: 90, sales: 47, physical: null },
-  ];
-
   const materials: Material[] = [
     { id: "e20", name: "20L empty shells", kind: "empties", onHand: 1_120, unit: "shells", reorderAt: 300, capacity: 2_000 },
     { id: "e19", name: "18.9L empty shells", kind: "empties", onHand: 170, unit: "shells", reorderAt: 150, capacity: 600 },
@@ -45,7 +37,7 @@ export function seed(today: string): OpsState {
     { id: "s1063", receipt: "SL-1063", day: addDays(today, -23), time: "09:10", customer: "Speke Resort", customerNote: "Weekly refill cycle", productId: "b20", kind: "refill", qty: 104, amount: 520_000, payment: "credit", dueDay: addDays(today, 7) },
     { id: "s1070", receipt: "SL-1070", day: addDays(today, -18), time: "15:40", customer: "Kampala Serena", customerNote: "Spa & banquet", productId: "d19", kind: "refill", qty: 46, amount: 230_000, payment: "credit", dueDay: addDays(today, 12) },
     { id: "s1079", receipt: "SL-1079", day: addDays(today, -4), time: "11:20", customer: "Latitude 0 Degrees", customerNote: "Dispenser contract", productId: "d19", kind: "refill", qty: 76, amount: 380_000, payment: "credit", dueDay: addDays(today, 26) },
-    // Today.
+    // Today, receipts numbered in time order.
     t("08:40", { customer: "Walk-in", customerNote: "Mr. Kato", productId: "b20", kind: "new", qty: 2, amount: 70_000, payment: "cash" }, 1080),
     t("09:18", { customer: "Apex Gyms", customerNote: "Kololo branch", productId: "b10", kind: "refill", qty: 18, amount: 63_000, payment: "airtel" }, 1081),
     t("10:02", { customer: "Route 2 delivery", customerNote: "Truck UBG-112", productId: "p5", kind: "refill", qty: 50, amount: 650_000, payment: "cash" }, 1082),
@@ -53,9 +45,26 @@ export function seed(today: string): OpsState {
     t("11:05", { customer: "Mukono Residences", productId: "b20", kind: "refill", qty: 40, amount: 200_000, payment: "airtel" }, 1084),
     t("11:15", { customer: "Kampala Medical Centre", customerNote: "Receiving dept.", productId: "b20", kind: "new", qty: 20, amount: 700_000, payment: "mtn" }, 1085),
     t("12:15", { customer: "Hotel Africana", productId: "d19", kind: "refill", qty: 20, amount: 100_000, payment: "credit", dueDay: addDays(today, 30) }, 1086),
-    t("13:45", { customer: "Lake Victoria Hotel", customerNote: "Entebbe route", productId: "d19", kind: "exchange", qty: 25, amount: 150_000, payment: "credit", dueDay: addDays(today, 14) }, 1087),
-    t("13:50", { customer: "Dr. Ronald Senkaali", productId: "b20", kind: "new", qty: 4, amount: 140_000, payment: "mtn" }, 1088),
-    t("14:22", { customer: "Kireka Supermarket", productId: "b20", kind: "refill", qty: 15, amount: 75_000, payment: "cash" }, 1089),
+    t("12:40", { customer: "Nakawa Market stall", productId: "j20", kind: "refill", qty: 60, amount: 270_000, payment: "cash" }, 1087),
+    t("13:45", { customer: "Lake Victoria Hotel", customerNote: "Entebbe route", productId: "d19", kind: "exchange", qty: 25, amount: 150_000, payment: "credit", dueDay: addDays(today, 14) }, 1088),
+    t("13:50", { customer: "Dr. Ronald Senkaali", productId: "b20", kind: "new", qty: 4, amount: 140_000, payment: "mtn" }, 1089),
+    t("14:22", { customer: "Kireka Supermarket", productId: "b20", kind: "refill", qty: 15, amount: 75_000, payment: "cash" }, 1090),
+  ];
+
+  // Sold counts come from today's receipts so the ledger and the sales list always agree.
+  const soldToday = (id: StockLine["productId"]) =>
+    sales.filter((x) => x.day === today && x.productId === id).reduce((a, x) => a + x.qty, 0);
+  const line = (productId: StockLine["productId"], opening: number, production: number, missing: number | null): StockLine => {
+    const sold = soldToday(productId);
+    return { productId, opening, production, sales: sold, physical: missing === null ? null : opening + production - sold - missing };
+  };
+  // Two shortages in the sample day: 2 × 20L bottles and 12 × 18.9L dispensers. Two products still to count.
+  const lines: StockLine[] = [
+    line("b20", 340, 250, 2),
+    line("j20", 180, 120, 0),
+    line("d19", 210, 100, 12),
+    line("b10", 150, 60, null),
+    line("p5", 280, 90, null),
   ];
 
   const e = (n: number, offset: number, rest: Omit<Expense, "id" | "ref" | "day">): Expense => ({

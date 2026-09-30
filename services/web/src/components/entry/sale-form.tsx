@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/primitives";
 import { ChoiceGroup, Field, Input, Select, Stepper } from "@/components/ui/form";
 import { PAYMENT_LABEL, PRODUCTS, SALE_KIND_LABEL, unitPrice } from "@/lib/catalog";
-import { num, ugx } from "@/lib/format";
+import { num, money } from "@/lib/format";
 import { CREDIT_TERMS_DAYS } from "@/lib/reducer";
 import { useStore } from "@/lib/store";
 import type { PaymentMethod, ProductId, SaleKind } from "@/lib/types";
@@ -39,7 +39,7 @@ export function SaleForm({ onDone }: { onDone: () => void }) {
         if (qty < 1) return setError("Quantity must be at least 1.");
         const ok = dispatch({ type: "recordSale", customer, productId, kind, qty, payment, time: nowHHMM() });
         if (!ok) return setError("Could not save this sale. Check the details and try again.");
-        notify(`Sale saved: ${ugx(total)}`);
+        notify(`Sale saved: ${money(total)}`);
         onDone();
       }}
     >
@@ -80,7 +80,7 @@ export function SaleForm({ onDone }: { onDone: () => void }) {
 
       <div className="flex items-center justify-between rounded-lg bg-canvas px-4 py-3">
         <span className="text-sm text-slate-600">{num(qty)} × {num(price)}</span>
-        <span className="tnum text-lg font-semibold text-ink">{ugx(total)}</span>
+        <span className="tnum text-lg font-semibold text-ink">{money(total)}</span>
       </div>
 
       <Button type="submit" variant="primary" className="w-full">Save sale</Button>
