@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CURRENCY, addDays, compact, day, daysBetween, isoDay, longDay, monthName, num, pct, ratio, shortDay, signed, money, weekday } from "./format";
+import { CURRENCY, addDays, isoDayIn, compact, day, daysBetween, isoDay, longDay, monthName, num, pct, ratio, shortDay, signed, money, weekday } from "./format";
 
 describe("format", () => {
   it("groups thousands and rounds", () => {
@@ -43,6 +43,10 @@ describe("format", () => {
     expect(monthName("2026-12-31")).toBe("December 2026");
     expect(longDay("2026-09-30")).toBe("Wednesday, 30 September");
     expect(isoDay(new Date(2026, 0, 5))).toBe("2026-01-05");
+    // 22:30 UTC on 30 Sep is already 1 Oct in Kigali (UTC+2).
+    expect(isoDayIn(new Date("2026-09-30T22:30:00Z"))).toBe("2026-10-01");
+    expect(isoDayIn(new Date("2026-09-30T21:59:00Z"))).toBe("2026-09-30");
+    expect(isoDayIn(new Date("2026-09-30T22:30:00Z"), "UTC")).toBe("2026-09-30");
   });
 
   it("does day arithmetic across month and year boundaries", () => {

@@ -86,6 +86,15 @@ export function monthName(iso: string): string {
   return `${MONTHS[m - 1]} ${y}`;
 }
 
+/** The plant's timezone. "Today" is always the calendar day here, wherever the server runs. */
+export const BUSINESS_TZ = "Africa/Kigali";
+
+/** Calendar day of `date` in `timeZone` as ISO "YYYY-MM-DD". */
+export function isoDayIn(date: Date, timeZone: string = BUSINESS_TZ): string {
+  // en-CA formats as YYYY-MM-DD in every ICU build.
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
 /** Local calendar day as ISO "YYYY-MM-DD". */
 export function isoDay(date: Date): string {
   const y = date.getFullYear();
